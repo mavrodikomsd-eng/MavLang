@@ -1,0 +1,23 @@
+[package]
+name = "notify_tray"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "notify_tray"
+path = "src/main.rs"
+
+[dependencies]
+winapi = { version = "0.3", features = [
+    "winuser",
+    "shellapi",
+    "libloaderapi",
+    "winnt",
+    "commctrl",
+    "minwindef",
+    "ntdef",
+    "windef",
+] }
+
+[profile.release]
+opt-level = 2

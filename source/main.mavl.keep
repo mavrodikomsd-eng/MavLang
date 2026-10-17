@@ -1,0 +1,11 @@
+// MavLang example v0.1
+fn main() {
+    let x: i32 = 5;
+    let mut y = 10;
+    y = y + x;
+    print(y);
+    print("hello mav");
+    print("zhopa {}c1", y+y+x*95);
+
+gui::window("print");
+}

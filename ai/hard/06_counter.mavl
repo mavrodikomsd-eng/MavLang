@@ -1,0 +1,17 @@
+struct Counter {
+    n: i32,
+}
+
+fn bump(c: &mut Counter) {
+    c.n = c.n + 1;
+}
+
+fn main() {
+    let mut c = Counter { n: 0 };
+    let mut i = 0;
+    while i < 5 {
+        bump(&mut c);
+        i = i + 1;
+    }
+    print(c.n);
+}

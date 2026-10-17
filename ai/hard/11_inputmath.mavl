@@ -1,0 +1,4 @@
+fn main() {
+    let t = input("n? ");
+    print(to_int(t) * 2);
+}

@@ -1,0 +1,28 @@
+# Build artifacts
+target/
+intRs/target/
+compiler/target/
+notify_tray/target/
+*.exe
+*.dll
+*.pdb
+
+# Python
+__pycache__/
+*.pyc
+.ai/.venv/
+*.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

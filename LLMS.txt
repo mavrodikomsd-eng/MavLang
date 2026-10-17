@@ -1,0 +1,41 @@
+# MavLang LLMS.txt — дока для ИИ
+
+MavLang is a tiny Rust-like language with .mavl extension.
+Compiler: mavc.py transpiles source/*.mavl -> intRs/src/main.rs -> cargo build.
+Copy binaries to target/debug or target/release.
+
+SYNTAX v0.4 (subset of Rust):
+- entry: fn main() { ... } required
+- let x: i32 = 5; | let mut y = 10;
+- print(x); print("hi");  // transpiles to println!
+- STDLIB (transpiled to std, no imports needed):
+  input("prompt"); -> String from stdin | len(x); -> usize
+  read_file("f"); -> String | write_file("f", data);
+  split(s, ","); -> Vec<String> | trim(s); upper(s); lower(s); -> String
+  to_int(s); -> i32 | sleep(100); ms | args(); -> Vec<String>
+  arg(1); -> String (0 is program name) | append_file("f", data);
+  lines(s); -> Vec<String> | join(v, ","); -> String
+  contains(s, "x"); -> bool | check(1 + 1 == 2); -> assert!
+  capitalize("hi"); -> "Hi" | gui::window("hi"); -> stub println
+  env("PATH"); -> String | exists("a.txt"); -> bool
+  time_ms(); -> i64 | dir("."); -> Vec<String>
+  gui::window("hi"); -> stub println
+- if/else, while, for, fn f(a: i32) -> i32 { return a; } pass through to Rust
+- types: i32, u32, f64, bool, String, &str
+
+MEM MODES (--mem):
+- borrow: safe Rust borrows
+- arena: placeholder, future bump allocator
+- manual: unsafe allowed
+
+RULES FOR AI:
+- output only valid MavLang v0.4 as above
+- always include fn main
+- every statement ends with ; except { } blocks
+- use print(x); for output
+
+EXAMPLE:
+fn main() {
+    let x: i32 = 5;
+    print(x);
+}

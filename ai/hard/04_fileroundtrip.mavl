@@ -1,0 +1,5 @@
+fn main() {
+    write_file("hard_w.txt", "42");
+    let back = read_file("hard_w.txt");
+    print(to_int(back) + 8);
+}

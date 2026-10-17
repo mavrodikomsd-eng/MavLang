@@ -1,0 +1,4 @@
+fn main() {
+    let s = "  Rust Lang  ";
+    print(lower(trim(s)));
+}

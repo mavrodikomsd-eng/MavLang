@@ -1,0 +1,17 @@
+fn main() {
+    let s = "  hello world  ";
+    print(trim(s));
+    print(upper("abc"));
+    print(lower("ABC"));
+    print(len("hello"));
+    let v = split("a,b,c", ",");
+    print(len(v));
+    print(to_int("42") + 8);
+    write_file("mav_test.txt", "hi mav");
+    let back = read_file("mav_test.txt");
+    print(back);
+    let a = args();
+    print(len(a));
+    sleep(10);
+    print("done");
+}

@@ -1,0 +1,8 @@
+fn main() {
+    let mut a = [10, 20, 30];
+    let p: *mut i32 = a.as_mut_ptr();
+    unsafe {
+        *p.offset(1) = 99;
+    }
+    print(a[1]);
+}

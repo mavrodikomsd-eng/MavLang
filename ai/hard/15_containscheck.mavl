@@ -1,0 +1,8 @@
+fn main() {
+    let log = "error: disk full";
+    if contains(log, "error") {
+        print("found");
+    }
+    check(2 * 3 == 6);
+    print("ok");
+}

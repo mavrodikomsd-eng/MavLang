@@ -1,0 +1,13 @@
+fn rep(s: &str, n: i32) -> String {
+    let mut out = "".to_string();
+    let mut i = 0;
+    while i < n {
+        out = out + s;
+        i = i + 1;
+    }
+    return out;
+}
+
+fn main() {
+    print(rep("ab", 3));
+}

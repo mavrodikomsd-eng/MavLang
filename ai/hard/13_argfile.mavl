@@ -1,0 +1,8 @@
+fn main() {
+    let f = arg(1);
+    if len(f) > 0 {
+        print(read_file(f));
+    } else {
+        print("usage");
+    }
+}

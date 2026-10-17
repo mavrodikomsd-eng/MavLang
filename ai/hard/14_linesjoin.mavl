@@ -1,0 +1,6 @@
+fn main() {
+    let t = "a\nb\nc";
+    let v = lines(t);
+    print(len(v));
+    print(join(v, "-"));
+}

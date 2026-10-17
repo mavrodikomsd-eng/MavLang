@@ -1,0 +1,9 @@
+fn main() {
+    let mut v = 1;
+    {
+        let r = &v;
+        print(r);
+    }
+    v = v + 1;
+    print(v);
+}

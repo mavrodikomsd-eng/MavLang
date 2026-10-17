@@ -1,0 +1,10 @@
+{"id": "print-var", "output": "fn main() {\n    let mut x = 5;\n    x = x + 10;\n    print(x);\n} // fn main"}
+{"id": "if-else", "output": "fn main() {\n    let x: i32 = 8;\n    if x > 5 {\n        print(\"big\");\n    } else {\n        print(\"small\");\n    }\n} sniper"}
+{"id": "while-loop", "output": "fn main() {\n    let mut i = 0;\n    while i < 3 {\n        print(i);\n        i = i + 1;\n    }\n} sniper"}
+{"id": "for-range", "output": "fn main() {\n    for i in 0..4 {\n        print(i);\n    }\n} // fn main"}
+{"id": "function", "output": "fn add(a: i32, b: i32) -> i32 {\n    return a + b;\n}\n\nfn main() {\n    let r = add(3, 4);\n    print(r);\n}⏎"}
+{"id": "struct", "output": "struct Point { x: i32, y: i32 }\n\nfn main() {\n    let p = Point { x: 10, y: 20 };\n    print(p.x);\n    print(p.y);\n}"}
+{"id": "enum-match", "output": "fn main() {\n    let d = Direction::Up;\n    match d {\n        Direction::Up => print(\"up\"),\n        Direction::Down => print(\"down\"),\n    }\n} sniper"}
+{"id": "borrow-shared", "output": "fn greet(name: &str) {\n    print(\"hi\", name);\n}\n\nfn main() {\n    let n = \"jane\";\n    greet(n);\n} // fn main\n\nfn main() { ... } // fn main\nfn greet(name: &str) { ... } // fn greet\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } // fn main\nfn main() { ... } //"}
+{"id": "borrow-mut", "output": "fn double(x: &mut i32) {\n    *x = *x + *x;\n}\n\nfn main() {\n    let mut a = 5;\n    double(&mut a);\n    print(a);\n}⏎"}
+{"id": "unsafe-manual", "output": "fn main() {\n    let mut x: i32 = 10;\n    unsafe {\n        write(volatile &x, 20);\n    }\n    print(x);\n} // manual"}

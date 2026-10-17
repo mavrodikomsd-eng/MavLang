@@ -1,0 +1,6 @@
+fn main() {
+    write_file("app.log", "l1\n");
+    append_file("app.log", "l2\n");
+    append_file("app.log", "l3\n");
+    print(len(lines(read_file("app.log"))));
+}

@@ -1,0 +1,8 @@
+fn main() {
+    let a = arg(1);
+    if a == "" {
+        print("none");
+    } else {
+        print(a);
+    }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "mavlang",
+  "displayName": "MavLang",
+  "description": "Подсветка для MavLang (.mavl)",
+  "version": "0.1.0",
+  "main": "./client/out/extension.js",
+  "activationEvents": ["onLanguage:mavlang"],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "mavlang",
+        "aliases": ["MavLang", "mavlang"],
+        "extensions": [".mavl"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mavlang",
+        "scopeName": "source.mavl",
+        "path": "./syntaxes/mavlang.tmGrammar.json"
+      }
+    ]
+  }
+}

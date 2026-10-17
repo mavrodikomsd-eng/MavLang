@@ -1,0 +1,16 @@
+{"id": "fizzbuzz", "output": "fn main() {\n    for i in 1..=15 {\n        if i % 3 == 0 && i % 5 == 0 {\n            print(\"fizzbuzz\");\n        } else if i % 3 == 0 {\n            print(\"fizz\");\n        } else if i % 5 == 0 {\n            print(\"buzz\");\n        } else {\n            print(i);\n        }\n    }\n}"}
+{"id": "csvsum", "output": "fn main() {\n    let parts = split(\"10,20,30\", \",\");\n    let mut s = 0;\n    for p in parts {\n        s = s + to_int(p);\n    }\n    print(s);\n}"}
+{"id": "wordcount", "output": "fn main() {\n    let s = trim(\"  hello world hello  \");\n    print(len(split(s, \" \")) + 1);\n    capitalize(trim(split(s, \" \")));\n}"}
+{"id": "fileroundtrip", "output": "fn main() {\n    write_file(\"hard_w.txt\", \"42\");\n    let r = read_file(\"hard_w.txt\");\n    print(to_int(r) + 8);\n}"}
+{"id": "argsdefault", "output": "fn main() {\n    let a = args();\n    if len(a) > 0 {\n        print(a[0]);\n    } else {\n        print(\"none\");\n    }\n}"}
+{"id": "counter", "output": "struct Counter {\n    n: i32,\n}\n\nfn main() {\n    let mut c = Counter { n: 0 };\n    loop {\n        c.n = c.n + 1;\n        if c.n >= 5 {\n            break;\n        }\n    }\n    print(c.n);\n}"}
+{"id": "fib", "output": "fn fib(n: i32) -> i32 {\n    if n <= 1 {\n        return n;\n    }\n    return fib(n - 1) + fib(n - 2);\n}\n\nfn main() {\n    print(fib(10));\n}\n```"}
+{"id": "normalize", "output": "fn main() {\n    print(lower(trim(\"  Rust Lang  \")));\n}"}
+{"id": "borrowseries", "output": "fn main() {\n    let mut v = 42;\n    {\n        let r = &v;\n        print(r);\n    }\n    v = v + 1;\n    print(v);\n}"}
+{"id": "ptroffset", "output": "fn main() {\n    let mut a = [10, 20, 30];\n    unsafe {\n        a[1] = 99;\n    }\n    print(a[1]);\n}"}
+{"id": "inputmath", "output": "fn main() {\n    let n = input(\"number? \");\n    print(to_int(n) * 2);\n}"}
+{"id": "repconcat", "output": "fn rep(s: &str, n: i32) -> String {\n    let mut res = String::new();\n    for _ in 0..n {\n        res = res + s;\n    }\n    return res;\n}\n\nfn main() {\n    print(rep(\"ab\", 3));\n} // ababab\n```"}
+{"id": "argfile", "output": "fn main() {\n    let f = arg(1);\n    if len(f) > 0 {\n        print(read_file(f));\n    } else {\n        print(\"usage\");\n    }\n}"}
+{"id": "linesjoin", "output": "fn main() {\n    let lines = split(\"a\\nb\\nc\", \"\\n\");\n    print(len(lines));\n    print(join(lines, \"-\"));\n}"}
+{"id": "containscheck", "output": "fn main() {\n    let log = \"error in file\";\n    if contains(log, \"error\") {\n        print(\"found\");\n    }\n    check(1 == 2);\n}"}
+{"id": "appendlog", "output": "fn main() {\n    write_file(\"app.log\", \"a\\nb\\nc\");\n    append_file(\"app.log\", \"d\\ne\\nf\");\n    print(len(lines(read_file(\"app.log\"))));\n}"}

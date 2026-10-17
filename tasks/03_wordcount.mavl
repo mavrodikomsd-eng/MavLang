@@ -1,0 +1,6 @@
+fn main() {
+    let s = "  hello world hello  ";
+    let words = split(trim(s), " ");
+    print(len(words));
+    print(upper(words[0]));
+}

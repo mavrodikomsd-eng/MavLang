@@ -1,0 +1,5 @@
+fn main() {
+    let s = input("");
+    let n: i32 = to_int(s);
+    print(n * 2);
+}

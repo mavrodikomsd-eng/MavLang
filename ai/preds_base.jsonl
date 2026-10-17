@@ -1,0 +1,10 @@
+{"id": "print-var", "output": "```rust\n5\n```"}
+{"id": "if-else", "output": "small"}
+{"id": "while-loop", "output": "```python\n0\n1\n2\n```"}
+{"id": "for-range", "output": "0\n1\n2"}
+{"id": "function", "output": "```rust\nfn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n```"}
+{"id": "struct", "output": "```cpp\nstruct Point {\n    int x;\n    int y;\n};\n```"}
+{"id": "enum-match", "output": "```rust\nenum Direction {\n    North,\n    South,\n    West,\n    East,\n}\n```"}
+{"id": "borrow-shared", "output": "```rust\nfn greet(name: &str) {\n    println!(\"Hello, {}!\", name);\n}\n```"}
+{"id": "borrow-mut", "output": "```rust\nfn double(x: &mut i32) {\n    *x *= 2;\n}\n```\n\nExplanation:\n- The function `double` takes a mutable reference to an integer `x`.\n- Inside the function, the expression `*x *= 2;` is used to multiply the value of `x` by 2.\n- The `*x` dereferences the mutable reference `x`, allowing it to be modified directly.\n- The result of multiplying `x` by 2 is then assigned back to `x`. This effectively doubles the value of `x`."}
+{"id": "unsafe-manual", "output": "unsafe fn main() {\n    let mut i32 = 0;\n    unsafe {\n        *i32 = 10;\n    }\n    println!(\"{}\", i32);\n}\n```"}

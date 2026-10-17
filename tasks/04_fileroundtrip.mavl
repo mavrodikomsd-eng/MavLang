@@ -1,0 +1,6 @@
+fn main() {
+    write_file("mav_roundtrip.txt", "42");
+    let content = read_file("mav_roundtrip.txt");
+    let n: i32 = to_int(content);
+    print(n + 8);
+}

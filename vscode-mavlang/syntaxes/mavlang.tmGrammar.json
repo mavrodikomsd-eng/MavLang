@@ -1,0 +1,91 @@
+{
+  "scopeName": "source.mavl",
+  "name": "MavLang",
+  "fileTypes": ["mavl"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#numbers" },
+    { "include": "#macros" },
+    { "include": "#functions" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.mavl",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.mavl",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.mavl",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "name": "constant.character.escape.mavl", "match": "\\\\." }]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.mavl",
+          "match": "\\b(fn|let|mut|if|else|while|for|in|return|struct|enum|impl|match|use|pub|const|unsafe|as|is|loop|break|continue|true|false)\\b"
+        },
+        {
+          "name": "keyword.mem.mavl",
+          "match": "\\b(borrow|arena|manual|mem)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.mavl",
+          "match": "\\b(i32|u32|i64|u64|f32|f64|bool|char|String|str|Vec|Option|Result)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.mavl",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "macros": {
+      "patterns": [
+        {
+          "name": "entity.name.function.macro.mavl",
+          "match": "\\b(print|input|read_file|write_file|append_file|split|lines|join|trim|upper|lower|capitalize|to_int|sleep|args|arg|len|contains|check|env|exists|time_ms|dir)(?=\\()"
+        },
+        {
+          "name": "entity.name.function.macro.mavl",
+          "match": "\\b(println!)"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.mavl",
+          "match": "\\b(fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.control.mavl" },
+            "2": { "name": "entity.name.function.mavl" }
+          }
+        }
+      ]
+    }
+  }
+}
