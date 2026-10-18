@@ -140,12 +140,19 @@ fn has_top_level_comma(s: &str) -> bool {
 
 /// Граница слова слева: начало строки или prev не буква/цифра/_/точка.
 /// Отсекает `x.len(`, `my_len(`, `println` и т.п.
+/// Исключение: `0..len(v)` — range-выражение, после `..` builtin раскрываем.
 fn is_word_boundary(c: &[char], pos: usize) -> bool {
     if pos == 0 {
         return true;
     }
     let p = c[pos - 1];
-    !(p.is_alphanumeric() || p == '_' || p == '.' || p == ':')
+    if p == '.' {
+        if pos >= 2 && c[pos - 2] == '.' {
+            return true; // `..len(` — диапазон, не метод
+        }
+        return false; // `.len(` — метод, не трогаем
+    }
+    !(p.is_alphanumeric() || p == '_' || p == ':')
 }
 
 /// true если позиция — имя в `fn name(` (определение функции).
@@ -678,10 +685,69 @@ fn transpile_once(line: &str) -> String {
     out
 }
 
+/// `let x: String = "литерал";` → добавляет `.to_string()` (иначе E0308).
+/// Только если справа голый строковый литерал; вызовы функций и конкатенации не трогаем.
+fn fix_typed_string_let(line: &str) -> String {
+    if !line.trim_start().starts_with("let ") {
+        return line.to_string();
+    }
+    let colon = match line.find(':') {
+        Some(i) => i,
+        None => return line.to_string(),
+    };
+    let after_colon = line[colon + 1..].trim_start();
+    if !after_colon.starts_with("String") {
+        return line.to_string();
+    }
+    // за "String" должен идти знак '=' (отсекает Vec<String>, StringMul и т.п.)
+    let after_type = &after_colon["String".len()..];
+    if !after_type.trim_start().starts_with('=') {
+        return line.to_string();
+    }
+    let eq = match line[colon..].find('=') {
+        Some(k) => colon + k,
+        None => return line.to_string(),
+    };
+    let rrhs = line[eq + 1..].trim_start();
+    if !rrhs.starts_with('"') {
+        return line.to_string();
+    }
+    // ищем закрывающую кавычку литерала
+    let mut end = None;
+    let mut chars = rrhs.char_indices().skip(1);
+    while let Some((i, ch)) = chars.next() {
+        match ch {
+            '\\' => {
+                chars.next();
+            }
+            '"' => {
+                end = Some(i);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let close = match end {
+        Some(i) => i,
+        None => return line.to_string(),
+    };
+    let tail = &rrhs[close + 1..];
+    if !(tail.trim_start().starts_with(';') || tail.trim().is_empty()) {
+        return line.to_string(); // после литерала что-то ещё — не трогаем
+    }
+    let rhs_start = line[eq + 1..].len() - rrhs.len() + eq + 1;
+    format!(
+        "{}{}.to_string(){}",
+        &line[..rhs_start],
+        &rrhs[..=close],
+        tail
+    )
+}
+
 /// Строка целиком: крутим проходы пока вложенные вызовы
 /// (типа `print(trim(s))`) полностью не раскроются. Сходится за 2-3 прохода.
 fn transpile_line(line: &str) -> String {
-    let mut cur = transpile_once(line);
+    let mut cur = transpile_once(&fix_typed_string_let(line));
     for _ in 0..8 {
         let next = transpile_once(&cur);
         if next == cur {
