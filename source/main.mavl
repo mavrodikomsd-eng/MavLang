@@ -1,8 +1,13 @@
+
 fn main() {
-    let log: String = "error: something failed";
-    if contains(log, "error") {
-        print("found");
+    let s = "  hello world  ";
+    print(upper(trim(s)));
+
+    let v = split("a,b,c", ",");
+    for i in 0..len(v) {
+        print(v[i]);
     }
-    check(2 * 3 == 6);
-    print("ok");
+
+    write_file("out.txt", "собрано MavLang v0.4.1");
+    print(read_file("out.txt"));
 }
