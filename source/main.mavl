@@ -1,13 +1,9 @@
-
 fn main() {
-    let s = "  hello world  ";
-    print(upper(trim(s)));
-
-    let v = split("a,b,c", ",");
-    for i in 0..len(v) {
-        print(v[i]);
-    }
-
-    write_file("out.txt", "собрано MavLang v0.4.1");
-    print(read_file("out.txt"));
+    let s = "  big file  ";
+    let parts = split("one,two,three", ",");
+    let l = read_file("mavl_notes.txt");
+    print(len(parts));
+    print(len(l));
+    print(trim(s));
+    print(upper("mavl"));
 }

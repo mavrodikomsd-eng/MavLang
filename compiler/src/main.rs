@@ -106,8 +106,97 @@ fn find_closing_paren(c: &[char], open_paren_at: usize) -> Option<usize> {
     None
 }
 
-fn has_top_level_comma(s: &str) -> bool {
+/// Верхнеуровневый '+' в строке (вне строк/скобок)?
+fn has_top_level_plus(s: &str) -> bool {
     let c: Vec<char> = s.chars().collect();
+    let mut depth = 0i32;
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < c.len() {
+        if let Some(q) = in_str {
+            if c[i] == '\\' && i + 1 < c.len() {
+                i += 2;
+                continue;
+            }
+            if c[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        match c[i] {
+            '"' | '\'' => in_str = Some(c[i]),
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            '+' if depth == 0 => {
+                // выбираем только бинарный: слева не оператор/скобка
+                let bin = i > 0
+                    && !matches!(
+                        c[i - 1],
+                        '+' | '=' | '(' | '[' | ',' | '-'
+                    );
+                if bin {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    false
+}
+
+/// Режем верхнеуровневым '+' на части (вне строк/скобок).
+fn plus_parts(s: &str) -> Vec<String> {
+    let c: Vec<char> = s.chars().collect();
+    let mut parts: Vec<String> = vec![];
+    let mut cur = String::new();
+    let mut depth = 0i32;
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < c.len() {
+        if let Some(q) = in_str {
+            cur.push(c[i]);
+            if c[i] == '\\' && i + 1 < c.len() {
+                cur.push(c[i + 1]);
+                i += 2;
+                continue;
+            }
+            if c[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        match c[i] {
+            '"' | '\'' => {
+                in_str = Some(c[i]);
+                cur.push(c[i]);
+                i += 1;
+                continue;
+            }
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            '+' if depth == 0 => {
+                let bin = i > 0
+                    && !matches!(c[i - 1], '+' | '=' | '(' | '[' | ',' | '-');
+                if bin {
+                    parts.push(cur.trim().to_string());
+                    cur = String::new();
+                    i += 1;
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        cur.push(c[i]);
+        i += 1;
+    }
+    parts.push(cur.trim().to_string());
+    parts
+}
+
+fn has_top_level_comma(s: &str) -> bool {    let c: Vec<char> = s.chars().collect();
     let mut depth = 0usize;
     let mut q: Option<char> = None;
     let mut i = 0;
@@ -592,7 +681,7 @@ fn transpile_once(line: &str) -> String {
                 }
             }
         }
-        // contains(s, sub) -> bool
+        // contains(s, sub) -> bool (sub может быть и строковой переменной)
         if starts_at(&c, i, "contains(") && is_word_boundary(&c, i) && !fn_before(&c, i) {
             let open = i + "contains".len();
             match find_closing_paren(&c, open) {
@@ -604,12 +693,67 @@ fn transpile_once(line: &str) -> String {
                     let arg: String = c[open + 1..j].iter().collect();
                     match split_top2(&arg) {
                         Some((s, sub)) => out.push_str(&format!(
-                            "{}.contains({})",
-                            s.trim(),
-                            sub.trim()
+                            "{{ let __p = ({}).to_string(); ({}).contains(__p.as_str()) }}",
+                            sub.trim(),
+                            s.trim()
                         )),
-                        None => out.push_str(&format!("{}.contains(\"\")", arg.trim())),
+                        None => out.push_str(&format!("({}).contains(\"\")", arg.trim())),
                     }
+                    i = j + 1;
+                    continue;
+                }
+            }
+        }
+        // find(s, sub) -> i32 (индекс вхождения или -1)
+        if starts_at(&c, i, "find(") && is_word_boundary(&c, i) && !fn_before(&c, i) {
+            let open = i + "find".len();
+            match find_closing_paren(&c, open) {
+                None => {
+                    out.push_str(&c[i..].iter().collect::<String>());
+                    break;
+                }
+                Some(j) => {
+                    let arg: String = c[open + 1..j].iter().collect();
+                    match split_top2(&arg) {
+                        Some((s, sub)) => out.push_str(&format!(
+                            "({{ let __p = ({}).to_string(); ({}).find(__p.as_str()) }}).map(|p| p as i32).unwrap_or(-1)",
+                            sub.trim(),
+                            s.trim()
+                        )),
+                        None => out.push_str(&format!(
+                            "({{ let __p = (\"\").to_string(); ({}).find(__p.as_str()) }}).map(|p| p as i32).unwrap_or(-1)",
+                            arg.trim()
+                        )),
+                    }
+                    i = j + 1;
+                    continue;
+                }
+            }
+        }
+        // replace(s, old, new) -> String
+        if starts_at(&c, i, "replace(") && is_word_boundary(&c, i) && !fn_before(&c, i) {
+            let open = i + "replace".len();
+            match find_closing_paren(&c, open) {
+                None => {
+                    out.push_str(&c[i..].iter().collect::<String>());
+                    break;
+                }
+                Some(j) => {
+                    let arg: String = c[open + 1..j].iter().collect();
+                    let (s, rest) = match split_top2(&arg) {
+                        Some(v) => v,
+                        None => (arg.trim().to_string(), "\"\",\"\"".to_string()),
+                    };
+                    let (o, n) = match split_top2(&rest) {
+                        Some(v) => v,
+                        None => (rest.trim().to_string(), "\"\"".to_string()),
+                    };
+                    out.push_str(&format!(
+                        "{{ let __o = ({}).to_string(); let __n = ({}).to_string(); ({}).replace(__o.as_str(), __n.as_str()) }}",
+                        o.trim(),
+                        n.trim(),
+                        s.trim()
+                    ));
                     i = j + 1;
                     continue;
                 }
@@ -664,6 +808,25 @@ fn transpile_once(line: &str) -> String {
                     let a = arg.trim();
                     let vec_fns = ["dir(", "args()", "split(", "lines("];
                     let is_vec = vec_fns.iter().any(|f| a.starts_with(f));
+                    // top-level '+' в аргументе → format!-конкатенация строк,
+                    // но только если первая часть — строковый литерал
+                    // (иначе это может быть числовая арифметика)
+                    if has_top_level_plus(a) && a.trim_start().starts_with('"') {
+                        let parts = plus_parts(a);
+                        if parts.len() >= 2 {
+                            let mut fmt = String::new();
+                            for _ in 0..parts.len() {
+                                fmt.push_str("{}");
+                            }
+                            out.push_str(&format!(
+                                "println!(\"{}\", {})",
+                                fmt,
+                                parts.join(", ")
+                            ));
+                            i = j + 1;
+                            continue;
+                        }
+                    }
                     if a.starts_with('"') || a.starts_with('\'') {
                         out.push_str(&format!("println!({})", a));
                     } else if is_vec {
@@ -685,27 +848,15 @@ fn transpile_once(line: &str) -> String {
     out
 }
 
-/// `let x: String = "литерал";` → добавляет `.to_string()` (иначе E0308).
-/// Только если справа голый строковый литерал; вызовы функций и конкатенации не трогаем.
+/// `let x: Type = "литерал";` и `let [mut] x = "литерал";` → добавляет
+/// `.to_string()`. Пусть Руст-тип будет String — иначе конкатенации
+/// (`res = res + s`) ломаются: &str + &String не собирается.
 fn fix_typed_string_let(line: &str) -> String {
     if !line.trim_start().starts_with("let ") {
         return line.to_string();
     }
-    let colon = match line.find(':') {
+    let eq = match line.find('=') {
         Some(i) => i,
-        None => return line.to_string(),
-    };
-    let after_colon = line[colon + 1..].trim_start();
-    if !after_colon.starts_with("String") {
-        return line.to_string();
-    }
-    // за "String" должен идти знак '=' (отсекает Vec<String>, StringMul и т.п.)
-    let after_type = &after_colon["String".len()..];
-    if !after_type.trim_start().starts_with('=') {
-        return line.to_string();
-    }
-    let eq = match line[colon..].find('=') {
-        Some(k) => colon + k,
         None => return line.to_string(),
     };
     let rrhs = line[eq + 1..].trim_start();
@@ -758,6 +909,442 @@ fn transpile_line(line: &str) -> String {
     cur
 }
 
+const TY_STR: u8 = 1;
+const TY_INT: u8 = 2;
+const TY_VEC: u8 = 3;
+
+/// builtin'ы, возвращающие String (для вывода типов и авто-`&`)
+const STR_FNS: [&str; 8] = [
+    "read_file",
+    "input",
+    "upper",
+    "lower",
+    "trim",
+    "capitalize",
+    "join",
+    "replace",
+];
+
+/// Урезает `//`-комментарий (не внутри строковых литералов).
+fn strip_line_comment(line: &str) -> String {
+    let c: Vec<char> = line.chars().collect();
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < c.len() {
+        if let Some(q) = in_str {
+            if c[i] == '\\' && i + 1 < c.len() {
+                i += 2;
+                continue;
+            }
+            if c[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        if c[i] == '"' || c[i] == '\'' {
+            in_str = Some(c[i]);
+            i += 1;
+            continue;
+        }
+        if c[i] == '/' && i + 1 < c.len() && c[i + 1] == '/' {
+            let s: String = c[..i].iter().collect();
+            return s;
+        }
+        i += 1;
+    }
+    line.to_string()
+}
+
+/// Позиция верхнеуровневого '=' (вне строк и скобок) — иначе None.
+fn top_level_eq(line: &str) -> Option<usize> {
+    let c: Vec<char> = line.chars().collect();
+    let mut depth = 0i32;
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < c.len() {
+        if let Some(q) = in_str {
+            if c[i] == '\\' && i + 1 < c.len() {
+                i += 2;
+                continue;
+            }
+            if c[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        if c[i] == '"' || c[i] == '\'' {
+            in_str = Some(c[i]);
+            i += 1;
+            continue;
+        }
+        if c[i] == '/' && i + 1 < c.len() && c[i + 1] == '/' {
+            return None;
+        }
+        match c[i] {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            '=' if depth == 0 => {
+                if i + 1 < c.len() && c[i + 1] == '=' {
+                    i += 2;
+                    continue;
+                }
+                return Some(i);
+            }
+            '>' if depth == 0 => {
+                return None;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Учит типы переменных из строки `let x = ...` в исходнике .mavl.
+fn learn_types(line: &str, vars: &mut std::collections::HashMap<String, u8>) {
+    let l = strip_line_comment(line);
+    let eq = match top_level_eq(&l) {
+        Some(i) => i,
+        None => return,
+    };
+    let prefix = l[..eq].trim().to_string();
+    let mut words = prefix.split_whitespace();
+    let mut it = words.clone();
+    if it.next() == Some("let") {
+        words.next(); // let
+        let second = words.next().unwrap_or("");
+        let (name, _) = match second {
+            "mut" => {
+                let third = words.next().unwrap_or("");
+                (third, 0)
+            }
+            tok => (tok, 0),
+        };
+        let name = match name.find(':') {
+            Some(p) => &name[..p],
+            None => name,
+        };
+        set_type(vars, name, rhs_type(l[eq + 1..].trim()));
+    }
+}
+
+fn set_type(vars: &mut std::collections::HashMap<String, u8>, name: &str, t: u8) {
+    if !name.is_empty()
+        && name
+            .chars()
+            .all(|ch| ch.is_alphanumeric() || ch == '_')
+    {
+        vars.insert(name.to_string(), t);
+    }
+}
+
+fn rhs_type(rhs: &str) -> u8 {
+    let r = rhs.trim().trim_end_matches(';').trim();
+    if r.is_empty() {
+        return 0;
+    }
+    if r.starts_with('"') || r.starts_with('\'') {
+        return TY_STR;
+    }
+    if !r.is_empty() && r.chars().all(|ch| ch.is_ascii_digit() || ch == '-' || ch == '.') {
+        return TY_INT;
+    }
+    for (name, t) in [
+        ("to_int(", TY_INT),
+        ("len(", TY_INT),
+        ("time_ms()", TY_INT),
+        ("split(", TY_VEC),
+        ("lines(", TY_VEC),
+        ("args()", TY_VEC),
+        ("dir(", TY_VEC),
+    ] {
+        if r.starts_with(name) {
+            return t;
+        }
+    }
+    for name in STR_FNS {
+        if r.starts_with(name) && r[name.len()..].starts_with('(') {
+            return TY_STR;
+        }
+    }
+    if r.starts_with("String::new()") {
+        return TY_STR;
+    }
+    0
+}
+
+/// `args().get(K)` → `arg(K)` (модели любят get; arg проще и безопаснее).
+fn fix_args_get(line: &str) -> String {
+    let mut cur = line.to_string();
+    loop {
+        match cur.find("args().get(") {
+            None => return cur,
+            Some(a) => {
+                let c: Vec<char> = cur.chars().collect();
+                let open = a + "args().get".len();
+                match find_closing_paren(&c, open) {
+                    None => return cur,
+                    Some(j) => {
+                        let inner: String = c[open + 1..j].iter().collect();
+                        let mut rebuilt = String::new();
+                        let a_chars: Vec<char> = cur.chars().collect();
+                        rebuilt.extend(a_chars[..a].iter());
+                        rebuilt.push_str("arg(");
+                        rebuilt.push_str(inner.trim());
+                        rebuilt.push(')');
+                        rebuilt.extend(c[j + 1..].iter());
+                        cur = rebuilt;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// `for x in v` → `for x in v.iter()` когда v — не диапазон `0..N`.
+fn fix_for_in(line: &str) -> String {
+    let s = line.trim_start();
+    let (lead, rest) = match line.find(s) {
+        Some(n) => (&line[..n], s),
+        None => ("", line),
+    };
+    if !(rest.starts_with("for ") || rest.starts_with("for\t")) {
+        return line.to_string();
+    }
+    // X = "for " ... " in " ... до '{' (вне строк)
+    let after_for = rest[4..].trim();
+    let in_pos = match after_for.find(" in ") {
+        Some(p) => p,
+        None => return line.to_string(),
+    };
+    let var = after_for[..in_pos].trim();
+    if var.is_empty() || var.split_whitespace().count() != 1 {
+        return line.to_string();
+    }
+    let tail = after_for[in_pos + 4..].trim_end();
+    // до '{'
+    let after: Vec<char> = tail.chars().collect();
+    let mut body = String::new();
+    let mut trailing = String::new();
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < after.len() {
+        if let Some(q) = in_str {
+            body.push(after[i]);
+            if after[i] == '\\' && i + 1 < after.len() {
+                body.push(after[i + 1]);
+                i += 2;
+                continue;
+            }
+            if after[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        if after[i] == '"' || after[i] == '\'' {
+            in_str = Some(after[i]);
+            body.push(after[i]);
+            i += 1;
+            continue;
+        }
+        if after[i] == '{' {
+            trailing = after[i..].iter().collect::<String>();
+            break;
+        }
+        body.push(after[i]);
+        i += 1;
+    }
+    let expr = body.trim();
+    if expr.is_empty()
+        || expr.contains("0..")
+        || expr.contains(';')
+        || expr.contains('=')
+        || expr.starts_with("fn ")
+    {
+        return line.to_string();
+    }
+    // только простое слово или сбалансированный вызов; иначе не трогаем
+    let ok = {
+        let fc: Vec<char> = expr.chars().collect();
+        (fc.first().map(|ch| ch.is_alphabetic() || *ch == '_') == Some(true))
+            && fc.iter().filter(|ch| **ch == '(').count()
+                == fc.iter().filter(|ch| **ch == ')').count()
+            && (fc.iter().filter(|ch| **ch == '(').count() > 0 || expr.chars().all(|ch| ch.is_alphanumeric() || ch == '_' || ch == '.' || ch == '(' || ch == ')'))
+    };
+    if !ok {
+        return line.to_string();
+    }
+    format!("{}for {} in {}.iter() {}", lead, var, expr, trailing)
+}
+
+/// Вставляет `&` перед строковыми правыми операндами `+`:
+/// `a = a + s` → `a = a + &s` (иначе String moves и E0382).
+/// Работает когда левый операнд — строковый, правый — строковая
+/// переменная или строковый builtin (trim(...), upper(...) и т.п.).
+fn fix_string_concat(line: &str, vars: &std::collections::HashMap<String, u8>) -> String {
+    let c: Vec<char> = line.chars().collect();
+
+    // helper: слово, заканчивающееся на позиции idx-1 (сканируем назад)
+    let word_back = |mut k: usize| -> usize {
+        while k > 0 && (c[k - 1].is_alphanumeric() || c[k - 1] == '_') {
+            k -= 1;
+        }
+        k
+    };
+    // helper: слово, начинающееся с позиции start
+    let word_fwd = |mut k: usize| -> usize {
+        while k < c.len() && (c[k].is_alphanumeric() || c[k] == '_') {
+            k += 1;
+        }
+        k
+    };
+    let is_str_fn_call = |name: &str, pos_after_word: usize| -> bool {
+        pos_after_word < c.len()
+            && c[pos_after_word] == '('
+            && STR_FNS.iter().any(|f| *f == name)
+    };
+
+    let mut inserts: Vec<usize> = vec![];
+    let mut depth = 0i32;
+    let mut in_str: Option<char> = None;
+    let mut i = 0usize;
+    while i < c.len() {
+        if let Some(q) = in_str {
+            if c[i] == '\\' && i + 1 < c.len() {
+                i += 2;
+                continue;
+            }
+            if c[i] == q {
+                in_str = None;
+            }
+            i += 1;
+            continue;
+        }
+        if c[i] == '"' || c[i] == '\'' {
+            in_str = Some(c[i]);
+            i += 1;
+            continue;
+        }
+        if c[i] == '/' && i + 1 < c.len() && c[i + 1] == '/' {
+            break; // комментарий — дальше не анализируем
+        }
+        match c[i] {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            '+' => {
+                // не унарный/составной: ++, += или старт строки
+                let unary = i == 0
+                    || matches!(c.get(i - 1), Some('+') | Some('=') | Some('(') | Some('[') | Some(',') | Some('{') | Some('-') | Some('*') | Some('>') | Some('<'));
+                if unary {
+                    i += 1;
+                    continue;
+                }
+                // ---- левый операнд ----
+                let mut k = i;
+                while k > 0 && c[k - 1] == ' ' {
+                    k -= 1;
+                }
+                if k == 0 {
+                    i += 1;
+                    continue;
+                }
+                // слово слева от '+'
+                let wl = word_back(k);
+                if wl == k {
+                    i += 1;
+                    continue;
+                }
+                let left_word: String = c[wl..k].iter().collect();
+                // перед словом ')' → левый операнд вызов: найдём имя функции
+                let left_is_str = if wl > 0 && c[wl - 1] == ')' {
+                    // ищем (' под уровнем с учётом вложенности
+                    let mut bal = 1i32;
+                    let mut p = wl - 1;
+                    while p > 0 && bal > 0 {
+                        p -= 1;
+                        if c[p] == ')' {
+                            bal += 1;
+                        }
+                        if c[p] == '(' {
+                            bal -= 1;
+                            if bal == 0 {
+                                break;
+                            }
+                        }
+                    }
+                    if c.get(p) == Some(&'(') {
+                        let fw = word_back(p);
+                        if fw < p {
+                            let name: String = c[fw..p].iter().collect();
+                            STR_FNS.iter().any(|f| *f == name)
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    matches!(vars.get(&left_word), Some(&TY_STR))
+                };
+                if !left_is_str {
+                    i += 1;
+                    continue;
+                }
+                // ---- правый операнд ----
+                let mut m = i + 1;
+                while m < c.len() && c[m] == ' ' {
+                    m += 1;
+                }
+                if m >= c.len() {
+                    i += 1;
+                    continue;
+                }
+                if c[m] == '&' || c[m] == '"' || c[m] == '\'' {
+                    i += 1;
+                    continue;
+                }
+                let wr = word_fwd(m);
+                if wr == m {
+                    i += 1;
+                    continue;
+                }
+                let right_word: String = c[m..wr].iter().collect();
+                let right_is_str = matches!(vars.get(&right_word), Some(&TY_STR))
+                    || is_str_fn_call(&right_word, wr);
+                if right_is_str {
+                    inserts.push(m);
+                }
+                i += 1;
+                continue;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    if inserts.is_empty() {
+        return line.to_string();
+    }
+    let mut out = String::new();
+    let mut set: std::collections::HashSet<usize> = inserts.into_iter().collect();
+    for (idx, ch) in c.iter().enumerate() {
+        if set.remove(&idx) {
+            out.push('&');
+        }
+        out.push(*ch);
+    }
+    out
+}
+/// Полный препроцесс строку .mavl перед transpile_line.
+fn prep_line(line: &str, vars: &mut std::collections::HashMap<String, u8>) -> String {
+    let l = fix_args_get(line);
+    learn_types(&l, vars);
+    let l = fix_for_in(&l);
+    fix_string_concat(&l, vars)
+}
+
 fn starts_at(hay: &[char], pos: usize, needle: &str) -> bool {
     let n: Vec<char> = needle.chars().collect();
     if pos + n.len() > hay.len() {
@@ -774,8 +1361,9 @@ pub(crate) fn parse_and_transpile(src: &str, mem: &str) -> Result<String, String
         return Err("дисбаланс { } в .mavl".into());
     }
     let mut out: Vec<String> = Vec::new();
+    let mut vars: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
     for line in src.lines() {
-        out.push(transpile_line(line));
+        out.push(transpile_line(&prep_line(line, &mut vars)));
     }
     Ok(format!("{}{}\n", header(mem), out.join("\n")))
 }
@@ -820,8 +1408,9 @@ fn combine_and_transpile(
         let marker_line = out.len() + 1; // куда встанет `// name`
         out.push(format!("// {}", name));
         let mut n = 0usize;
+        let mut vars: std::collections::HashMap<String, u8> = std::collections::HashMap::new();
         for line in content.lines() {
-            out.push(transpile_line(line));
+            out.push(transpile_line(&prep_line(line, &mut vars)));
             n += 1;
         }
         map.push((name.clone(), marker_line, n));
@@ -1056,6 +1645,24 @@ fn map_error(err: &str, header_lines: i64, mavl_name: &str) -> String {
     res
 }
 
+/// Мavl-подсказки к частым ошибкам rustc.
+fn hints_for(err: &str) -> Vec<&'static str> {
+    let mut h: Vec<&'static str> = vec![];
+    if err.contains("E0308") {
+        h.push("E0308 несовпадение типов: проверь let и аргументы; строковые литералы в let x: String mavc оборачивает .to_string() сам.");
+    }
+    if err.contains("E0382") {
+        h.push("E0382 строка перемещена: конкатенацию в цикле пиши a = a + &s (или просто a + s — mavc вставит & сам).");
+    }
+    if err.contains("E0425") {
+        h.push("E0425 имя не найдено: builtin'ы — arg(i), len(x), split(s, d), join(v, d), replace(s, o, n), find(s, x), to_int(s).");
+    }
+    if err.contains("E0499") {
+        h.push("E0499 повторное заимствование: держи одну изменяемую ссылку.");
+    }
+    h
+}
+
 fn ensure_cargo_project(root: &Path, rs_code: &str) {
     let intrs = root.join("intRs");
     fs::create_dir_all(intrs.join("src")).ok();
@@ -1097,6 +1704,9 @@ fn do_build(root: &Path, release: bool, mem: &str) -> i32 {
         let stderr = String::from_utf8_lossy(&out.stderr);
         println!("[mavc] ошибка компиляции MavLang (mem={}):", mem);
         println!("{}", map_error_multi(&stderr, &line_map));
+        for h in hints_for(&stderr) {
+            println!("[mavc] подсказка: {}", h);
+        }
         return out.status.code().unwrap_or(1);
     }
     let profile = if release { "release" } else { "debug" };
