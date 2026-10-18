@@ -1103,6 +1103,36 @@ fn fix_args_get(line: &str) -> String {
     }
 }
 
+/// `args(N)` → `arg(N)` (частая ошибка ИИ: путаница args()/arg(i)).
+/// `args()` без аргументов не трогаем. Однопроходный, без зацикливания.
+fn fix_args_n(line: &str) -> String {
+    let hay: Vec<char> = line.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < hay.len() {
+        if starts_at(&hay, i, "args(") {
+            let open = i + 4;
+            if let Some(j) = find_closing_paren(&hay, open) {
+                let inner: String = hay[open + 1..j].iter().collect();
+                if inner.trim().is_empty() {
+                    out.push_str("args()");
+                    i = j + 1;
+                    continue;
+                }
+                let inner = fix_args_n(&inner);
+                out.push_str("arg(");
+                out.push_str(&inner);
+                out.push(')');
+                i = j + 1;
+                continue;
+            }
+        }
+        out.push(hay[i]);
+        i += 1;
+    }
+    out
+}
+
 /// `for x in v` → `for x in v.iter()` когда v — не диапазон `0..N`.
 fn fix_for_in(line: &str) -> String {
     let s = line.trim_start();
@@ -1340,6 +1370,7 @@ fn fix_string_concat(line: &str, vars: &std::collections::HashMap<String, u8>) -
 /// Полный препроцесс строку .mavl перед transpile_line.
 fn prep_line(line: &str, vars: &mut std::collections::HashMap<String, u8>) -> String {
     let l = fix_args_get(line);
+    let l = fix_args_n(&l);
     learn_types(&l, vars);
     let l = fix_for_in(&l);
     fix_string_concat(&l, vars)

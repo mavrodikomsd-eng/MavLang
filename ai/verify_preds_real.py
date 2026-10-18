@@ -62,7 +62,9 @@ def main():
                 f.write(out)
             b = run(["mavc", "build", "--mem=" + mem])
             if b.returncode != 0:
-                print(f"[XX] {name:22} BUILD FAIL  {b.stdout.strip().splitlines()[-1][:120] if b.stdout else ''}")
+                lines = [ln.strip() for ln in b.stdout.strip().splitlines() if "error" in ln.lower()]
+                tail = " | ".join(ln[:110] for ln in lines[:3]) or "no-error-lines"
+                print(f"[XX] {name:22} BUILD FAIL  {tail}")
                 fail += 1
                 continue
             exe = EXE + (".exe" if os.name == "nt" else "")

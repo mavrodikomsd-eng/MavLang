@@ -37,7 +37,11 @@ def sanitize(text):
     for ch in INVISIBLE_JUNK:
         text = text.replace(ch, "")
     # trailing NBSP в концах строк (strip() его не всегда берёт)
-    lines = [ln.rstrip(" ") for ln in text.splitlines()]
+    # markdown-заборы: строка, начинающаяся с ```, в легитимном коде
+    # невозможна (это всегда fence ```/```rust/```mavl)
+    lines = [ln for ln in text.splitlines()
+             if not ln.lstrip().startswith("```")]
+    lines = [ln.rstrip(" ") for ln in lines]
     text = "\n".join(lines).strip()
     # хвостовые $ (наблюдалось `}$$` в конце argfile): $ вне строковых
     # литералов невалиден, а легитимный код на $ не заканчивается

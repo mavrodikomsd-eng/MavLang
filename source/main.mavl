@@ -1,9 +1,8 @@
 fn main() {
-    let s = "  big file  ";
-    let parts = split("one,two,three", ",");
-    let l = read_file("mavl_notes.txt");
-    print(len(parts));
-    print(len(l));
-    print(trim(s));
-    print(upper("mavl"));
+    let a = args();
+    if len(a) > 1 {
+        print(a[1]);
+    } else {
+        print("none");
+    }
 }

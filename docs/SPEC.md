@@ -184,6 +184,8 @@ return значение;
 | `args()` | Аргументы командной строки | `Vec<String>` | `args()` |
 | `arg(i)` | i-й аргумент или `""` | `String` | `arg(1);` (0 — имя программы) |
 | `contains(s, sub)` | Есть ли подстрока | `bool` | `contains("abc", "b")` |
+| `find(s, sub)` | Позиция подстроки, иначе `-1` | `i32` | `find("hi world", "world")` → `3` |
+| `replace(s, old, new)` | Заменить подстроки | `String` | `replace("a-b", "-", "+")` → `"a+b"` |
 | `check(условие)` | assert (для тестов) | — | `check(1 + 1 == 2);` |
 
 ### Примечания по типам возвращаемых значений
@@ -265,6 +267,7 @@ mavc watch [--release] [--mem=...]  (автосборка при изменен�
 
 - Ошибки синтаксиса MavLang (отсутствие `fn main`, дисбаланс `{ }`) сообщаются как `MavLang error in source/ИМЯ: строка`.
 - Ошибки `rustc` (`main.rs:NN`) маппятся обратно в `source/ИМЯ:MM` (с учётом шапки транспиляции).
+- К частым кодам ошибок (E0308, E0382, E0425, E0499, E0369) mavc добавляет `<подсказка>` — на русском, с идиомой для исправления.
 - `intRs/src/main.rs` — сгенерированный Rust-код, можно смотреть для отладки.
 
 ---
@@ -276,6 +279,7 @@ mavc watch [--release] [--mem=...]  (автосборка при изменен�
 - [x] v0.3: stdlib (`print`, `input`, `len`, `split`, `trim`, `upper`, `lower`, `to_int`, `sleep`, `args`, `arg`, `read_file`, `write_file`)
 - [x] v0.4: `append_file`, `lines`, `join`, `contains`, `check`, `capitalize`, `arg`
 - [x] v0.5: `env`, `exists`, `time_ms`, `dir`, `mavc watch`, LSP
+- [x] v0.5.1: авто-`&` строковой конкатенации, `format!`-печать `print("a " + x)`, `args().get(n)` → `arg(n)`, `find`, `replace`, `for x in vec`, mavc-подсказки к ошибкам rustc
 - [ ] v0.6: настоящий GUI (`egui` через крейты), реальный `--mem=arena`
 - [ ] v0.7: самоборrow-checker (безDelegating к rustc)
 - [ ] v0.8: async-сахар
