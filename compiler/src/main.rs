@@ -1367,10 +1367,75 @@ fn fix_string_concat(line: &str, vars: &std::collections::HashMap<String, u8>) -
     }
     out
 }
+/// Builtin-сахар над крейтом rand:
+/// `rand()` → `rand::random::<f64>()`
+/// `rand_int(a, b)` → `(rand::thread_rng().gen_range((a)..(b)))`
+/// Границы слов соблюдаются: `brand(` не трогаем.
+fn fix_rand_builtins(line: &str) -> String {
+    let hay: Vec<char> = line.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    let is_word = |c: char| c.is_alphanumeric() || c == '_';
+    while i < hay.len() {
+        // rand_int(a, b) — сначала, чтобы rand() не съел его префикс
+        if starts_at(&hay, i, "rand_int(") && (i == 0 || !is_word(hay[i - 1])) {
+            let open = i + "rand_int".len();
+            if let Some(j) = find_closing_paren(&hay, open) {
+                let inner: String = hay[open + 1..j].iter().collect();
+                // один top-level аргумент → до запятой, второй → после
+                let mut depth = 0i32;
+                let mut split: Option<usize> = None;
+                for (k, ch) in inner.char_indices() {
+                    match ch {
+                        '(' => depth += 1,
+                        ')' => depth -= 1,
+                        ',' if depth == 0 && split.is_none() => {
+                            split = Some(k);
+                        }
+                        _ => {}
+                    }
+                }
+                match split {
+                    Some(cpos) => {
+                        let a = inner[..cpos].trim();
+                        let b = inner[cpos + 1..].trim();
+                        let a = fix_rand_builtins(a);
+                        let b = fix_rand_builtins(&b);
+                        out.push_str(&format!(
+                            "(rand::Rng::gen_range(&mut rand::thread_rng(), ({})..({})))",
+                            a, b
+                        ));
+                        i = j + 1;
+                        continue;
+                    }
+                    None => {
+                        // один аргумент — это не наш вызов, пропускаем как есть
+                    }
+                }
+            }
+        }
+        if starts_at(&hay, i, "rand(") && (i == 0 || !is_word(hay[i - 1])) {
+            let open = i + "rand".len();
+            if let Some(j) = find_closing_paren(&hay, open) {
+                let inner: String = hay[open + 1..j].iter().collect();
+                if inner.trim().is_empty() {
+                    out.push_str("rand::random::<f64>()");
+                    i = j + 1;
+                    continue;
+                }
+            }
+        }
+        out.push(hay[i]);
+        i += 1;
+    }
+    out
+}
+
 /// Полный препроцесс строку .mavl перед transpile_line.
 fn prep_line(line: &str, vars: &mut std::collections::HashMap<String, u8>) -> String {
     let l = fix_args_get(line);
     let l = fix_args_n(&l);
+    let l = fix_rand_builtins(&l);
     learn_types(&l, vars);
     let l = fix_for_in(&l);
     fix_string_concat(&l, vars)
@@ -1568,13 +1633,24 @@ fn parse_mavlang_toml_deps(text: &str) -> Vec<(String, String)> {
 
 /// Читает mavlang.toml в корне и мержит [dependencies] в intRs/Cargo.toml.
 /// Не затирает name/edition, создаёт файлы/секции при отсутствии.
-fn sync_deps(root: &Path) {
+fn sync_deps(root: &Path, extra: &[(String, String)]) {
     let mtoml = root.join("mavlang.toml");
-    let text = match fs::read_to_string(&mtoml) {
-        Ok(t) => t,
-        Err(_) => return, // файла нет — как раньше
-    };
-    let deps = parse_mavlang_toml_deps(&text);
+    let mut deps: Vec<(String, String)> = Vec::new();
+    if let Ok(text) = fs::read_to_string(&mtoml) {
+        deps = parse_mavlang_toml_deps(&text);
+    }
+    for (k, v) in extra {
+        if !deps.iter().any(|(n, _)| n == k) {
+            // версия без кавычек → TOML прочитает как число; оборачиваем
+            let vv = v.trim();
+            let vv = if vv.starts_with('"') || vv.starts_with('\'') || vv.starts_with('{') {
+                vv.to_string()
+            } else {
+                format!("\"{}\"", vv)
+            };
+            deps.push((k.clone(), vv));
+        }
+    }
     if deps.is_empty() {
         return;
     }
@@ -1721,7 +1797,13 @@ fn do_build(root: &Path, release: bool, mem: &str) -> i32 {
         }
     };
     ensure_cargo_project(root, &rs_code);
-    sync_deps(root);
+    // авто-deps: builtin rand()/rand_int() тянут крейт rand сами
+    let extra: Vec<(String, String)> = if rs_code.contains("rand::") {
+        vec![("rand".to_string(), "0.8".to_string())]
+    } else {
+        vec![]
+    };
+    sync_deps(root, &extra);
     let intrs_toml = root.join("intRs").join("Cargo.toml");
     let mut cmd = Command::new("cargo");
     cmd.arg("build")

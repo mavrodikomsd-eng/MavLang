@@ -94,6 +94,8 @@ fn main() {
 | `contains(s, sub);` | подстрока → `bool` | `if contains(s, "err")` |
 | `find(s, sub);` | позиция подстроки или `-1` → `i32` | `find("hi world", "world")` → `3` |
 | `replace(s, o, n);` | заменить подстроки → `String` | `replace("a-b", "-", "+")` → `"a+b"` |
+| `rand();` | случайное f64 в [0, 1) | `let x = rand();` |
+| `rand_int(a, b);` | случайное целое в [a, b) | `rand_int(1, 6)` |
 | `check(c);` | проверка → `assert!` (для тестов) | `check(1 + 1 == 2)` |
 | `capitalize(s);` | первая буква заглавная → `String` | `capitalize("hi")` → `"Hi"` |
 | `env(name);` | переменная окружения → `String` | `env("PATH")` |

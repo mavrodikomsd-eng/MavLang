@@ -73,6 +73,8 @@ fn имя(параметр: тип) -> возвращаемый_тип {
 | `contains(s, sub)` | `contains(String, String)` | `bool` | `contains("abc", "b")` |
 | `find(s, sub)` | `find(String, String)` | `i32` | `find("hello world", "world")` → `6`; нет вхождения → `-1` |
 | `replace(s, old, new)` | `replace(String, String, String)` | `String` | `replace("a-b", "-", "+")` → `"a+b"` |
+| `rand()` | `rand()` | `f64` | `rand()` → `0.809…` (диапазон 0..1) |
+| `rand_int(a, b)` | `rand_int(i32, i32)` | `i32` | `rand_int(1, 6)` → целое в диапазоне [a, b) |
 | `check(cond)` | `check(bool)` | — | `check(1 + 1 == 2);` |
 | `env(name)` | `env(String)` | `String` | `env("PATH")` |
 | `exists(path)` | `exists(String)` | `bool` | `exists("a.txt")` |
@@ -172,7 +174,7 @@ fn main() {
 4. **Не используйте `println!` в исходном `.mavl`** — оно пройдёт транзитом, но используйте `print()`.
 5. **Точка с запятой `;` обязательна** в конце стейтментов (кроме `{ }` блоков).
 6. **Несколько файлов**: все `source/*.mavl` склеиваются. `main.mavl` первым.
-7. **`mavlang.toml`** в корне: `[deps] имя_крейта = "версия"` — добавляет зависимости в `intRs/Cargo.toml`.
+7. **`mavlang.toml`** в корне: `[deps] имя_крейта = "версия"` — добавляет зависимости в `intRs/Cargo.toml`. Builtin `rand()`/`rand_int()` подключают крейт `rand` СНАРУЖЕ — писать его в `[deps]` не нужно. Вызовы произвольных крейтов работают транзитом: `serde_json::to_string(x)` пройдёт, если крейт объявлен в `[deps]`.
 8. **Range с builtin разрешён**: `for i in 0..len(v)` — валидная идиома, транспилируется в `0..v.len()`.
 9. **Вызов встроенных как функций**: `trim(s)`, `upper(s)` — НЕ как методов `s.trim()`.
 10. **Печать вектора**: `print(v)` применит `{:?}` сам. `print("текст")` — без модификаторов.
